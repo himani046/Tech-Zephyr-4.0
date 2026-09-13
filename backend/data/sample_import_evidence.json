@@ -1,0 +1,43 @@
+{
+  "provider": "AWS",
+  "roleName": "PaymentRole",
+  "policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetObject",
+          "s3:PutObject",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "ec2:StartInstances",
+          "ec2:StopInstances",
+          "iam:CreateUser",
+          "iam:PassRole"
+        ],
+        "Resource": "*"
+      }
+    ]
+  },
+  "usage": {
+    "s3:GetObject": {"calls": 1832},
+    "s3:PutObject": {"calls": 428},
+    "dynamodb:GetItem": {"calls": 912},
+    "dynamodb:PutItem": {"calls": 187},
+    "ec2:StartInstances": {"calls": 3},
+    "ec2:StopInstances": {"calls": 0},
+    "iam:CreateUser": {"calls": 0},
+    "iam:PassRole": {"calls": 0}
+  },
+  "dependencies": [
+    {"from": "Payment Service", "to": "dynamodb:PutItem", "label": "requires", "permission": "dynamodb:PutItem"},
+    {"from": "Payment Service", "to": "dynamodb:GetItem", "label": "requires", "permission": "dynamodb:GetItem"},
+    {"from": "Payment Service", "to": "s3:GetObject", "label": "requires", "permission": "s3:GetObject"},
+    {"from": "Auto Scaling", "to": "ec2:StartInstances", "label": "requires", "permission": "ec2:StartInstances"}
+  ],
+  "services": [
+    {"id": "payment-service", "name": "Payment Service", "required": ["s3:GetObject", "dynamodb:GetItem", "dynamodb:PutItem"], "critical": true},
+    {"id": "auto-scaling", "name": "Auto Scaling", "required": ["ec2:StartInstances"], "critical": false}
+  ]
+}
