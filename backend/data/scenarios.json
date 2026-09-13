@@ -1,0 +1,51 @@
+{
+  "scenarios": [
+    {
+      "id": "payment-role",
+      "name": "PaymentRole Hardening",
+      "description": "Harden a payment workload while preserving checkout, database and autoscaling functionality.",
+      "role": "PaymentRole",
+      "permissions": [
+        "s3:GetObject", "s3:PutObject", "dynamodb:GetItem", "dynamodb:PutItem",
+        "ec2:StartInstances", "ec2:StopInstances", "iam:CreateUser", "iam:PassRole"
+      ],
+      "usage": {
+        "s3:GetObject": {"calls": 1832, "last_used": "2 minutes ago"},
+        "s3:PutObject": {"calls": 428, "last_used": "5 minutes ago"},
+        "dynamodb:GetItem": {"calls": 912, "last_used": "1 minute ago"},
+        "dynamodb:PutItem": {"calls": 187, "last_used": "1 minute ago"},
+        "ec2:StartInstances": {"calls": 3, "last_used": "8 days ago"},
+        "ec2:StopInstances": {"calls": 0, "last_used": "never"},
+        "iam:CreateUser": {"calls": 0, "last_used": "never"},
+        "iam:PassRole": {"calls": 0, "last_used": "never"}
+      },
+      "services": [
+        {"id":"payment-service","name":"Payment Service","required":["s3:GetObject","s3:PutObject","dynamodb:GetItem","dynamodb:PutItem"],"critical":true},
+        {"id":"autoscaling","name":"Auto Scaling Controller","required":["ec2:StartInstances"],"critical":true},
+        {"id":"reporting","name":"Reporting Service","required":["s3:GetObject"],"critical":false}
+      ],
+      "dependencies": [
+        {"from":"PaymentRole","to":"dynamodb:PutItem","label":"grants"},
+        {"from":"dynamodb:PutItem","to":"Payment Service","label":"required by"},
+        {"from":"PaymentRole","to":"ec2:StartInstances","label":"grants"},
+        {"from":"ec2:StartInstances","to":"Auto Scaling Controller","label":"required by"},
+        {"from":"PaymentRole","to":"iam:PassRole","label":"grants"}
+      ],
+      "red_team": ["iam:PassRole"],
+      "failure_injection": {"permission":"dynamodb:PutItem","service":"payment-service","message":"AccessDenied: payment transaction requires dynamodb:PutItem"}
+    },
+    {
+      "id": "analytics-role",
+      "name": "AnalyticsRole Cleanup",
+      "description": "Reduce unused analytics permissions without breaking scheduled reporting.",
+      "role": "AnalyticsRole",
+      "permissions": ["s3:GetObject","s3:PutObject","dynamodb:Scan","ec2:DescribeInstances","iam:CreateRole"],
+      "usage": {
+        "s3:GetObject":{"calls":420,"last_used":"10 minutes ago"},"s3:PutObject":{"calls":80,"last_used":"12 minutes ago"},
+        "dynamodb:Scan":{"calls":0,"last_used":"never"},"ec2:DescribeInstances":{"calls":14,"last_used":"2 days ago"},"iam:CreateRole":{"calls":0,"last_used":"never"}
+      },
+      "services":[{"id":"reporting","name":"Reporting Service","required":["s3:GetObject","s3:PutObject"],"critical":true}],
+      "dependencies":[],"red_team":["iam:CreateRole"],"failure_injection":null
+    }
+  ]
+}
